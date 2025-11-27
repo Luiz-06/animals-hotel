@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, ArrowLeft, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
-import api from "@/services/api"; 
+import api from "@/services/api";
 
 const TutorDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -41,7 +41,8 @@ const TutorDetails = () => {
         const payload = { ...animalData, tutorId: id };
         
         if (animalData.id) {
-            toast.error("Edição de animais requer implementação no Backend");
+            await api.put(`/animais/${animalData.id}`, payload);
+            toast.success("Animal atualizado com sucesso!");
         } else {
             await api.post('/animais', payload);
             toast.success("Animal cadastrado!");
@@ -49,6 +50,7 @@ const TutorDetails = () => {
         fetchData();
         setEditingAnimal(null);
     } catch (error) {
+        console.error(error);
         toast.error("Erro ao salvar animal.");
     }
   };

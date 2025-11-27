@@ -38,6 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem("animalhotels_user");
+    localStorage.removeItem("token"); 
     navigate("/");
   };
 

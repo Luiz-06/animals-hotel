@@ -5,30 +5,25 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 app.use(express.json());
-app.use(cors()); 
+app.use(cors());
 
-const SECRET_KEY = "segredo123"; 
+const SECRET_KEY = "segredo123";
 
 const db = {
-    tutores: [
-        { id: "1", nome: "Ana Silva", email: "ana@teste.com", telefone: "9999-1111" }
-    ],
-    animais: [
-        { id: "10", nome: "Rex", especie: "Cachorro", raca: "Vira-lata", idade: 3, tutorId: "1" }
-    ]
+    tutores: [],
+    animais: []
 };
-
 
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; 
+    const token = authHeader && authHeader.split(' ')[1];
 
-    if (token == null) return res.sendStatus(401); 
+    if (token == null) return res.sendStatus(401);
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
-        if (err) return res.sendStatus(403); 
+        if (err) return res.sendStatus(403);
         req.user = user;
-        next(); 
+        next();
     });
 };
 
@@ -61,7 +56,7 @@ app.put('/tutores/:id', authenticateToken, (req, res) => {
 
 app.delete('/tutores/:id', authenticateToken, (req, res) => {
     db.tutores = db.tutores.filter(t => t.id !== req.params.id);
-    db.animais = db.animais.filter(a => a.tutorId !== req.params.id); // Cascata
+    db.animais = db.animais.filter(a => a.tutorId !== req.params.id);
     res.status(204).send();
 });
 
@@ -77,6 +72,16 @@ app.post('/animais', authenticateToken, (req, res) => {
     const novoAnimal = { id: uuidv4(), ...req.body };
     db.animais.push(novoAnimal);
     res.status(201).json(novoAnimal);
+});
+
+app.put('/animais/:id', authenticateToken, (req, res) => {
+    const index = db.animais.findIndex(a => a.id === req.params.id);
+    if (index !== -1) {
+        db.animais[index] = { ...db.animais[index], ...req.body };
+        res.json(db.animais[index]);
+    } else {
+        res.status(404).json({ message: "Animal não encontrado" });
+    }
 });
 
 app.delete('/animais/:id', authenticateToken, (req, res) => {

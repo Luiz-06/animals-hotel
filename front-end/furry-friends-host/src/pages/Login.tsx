@@ -27,8 +27,9 @@ const Login = () => {
       
       localStorage.setItem('token', token);
       
+      login(email); 
+
       toast.success("Login realizado com sucesso!");
-      navigate('/dashboard');
 
     } catch (error) {
       console.error(error);
@@ -52,44 +53,16 @@ const Login = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-6">
-            
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-foreground">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="h-12"
-              />
+              <label htmlFor="email" className="text-sm font-medium text-foreground">Email</label>
+              <Input id="email" type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-12" />
             </div>
-
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-foreground">
-                Senha
-              </label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Sua senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="h-12"
-              />
+              <label htmlFor="password" className="text-sm font-medium text-foreground">Senha</label>
+              <Input id="password" type="password" placeholder="Sua senha" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-12" />
             </div>
-
-            <Button type="submit" className="w-full h-12 text-base font-medium">
-              Entrar
-            </Button>
-            
-            <p className="text-xs text-center text-muted-foreground pt-2">
-              Para demonstração, use qualquer email e a senha <strong>123456</strong>
-            </p>
+            <Button type="submit" className="w-full h-12 text-base font-medium">Entrar</Button>
+            <p className="text-xs text-center text-muted-foreground pt-2">Para demonstração, use qualquer email e a senha <strong>123456</strong></p>
           </form>
         </CardContent>
       </Card>
