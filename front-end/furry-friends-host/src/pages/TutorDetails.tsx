@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tutor, Animal } from "@/types";
-import { mockAnimais } from "@/lib/mock-data";
 import Layout from "@/components/Layout";
 import AnimalCard from "@/components/AnimalCard";
 import AnimalForm from "@/components/AnimalForm";
@@ -9,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, ArrowLeft, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
+import api from "@/services/api"; 
 
 const TutorDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,54 +19,50 @@ const TutorDetails = () => {
   const [editingAnimal, setEditingAnimal] = useState<Animal | null>(null);
 
   useEffect(() => {
-    const storedTutores = localStorage.getItem("animalhotels_tutores");
-    if (storedTutores) {
-      const tutores: Tutor[] = JSON.parse(storedTutores);
-      const foundTutor = tutores.find((t) => t.id === id);
-      if (foundTutor) {
-        setTutor(foundTutor);
-      }
-    }
-
-    const storedAnimais = localStorage.getItem("animalhotels_animais");
-    if (storedAnimais) {
-      const allAnimais: Animal[] = JSON.parse(storedAnimais);
-      setAnimais(allAnimais.filter((a) => a.tutorId === id));
-    } else {
-      const filtered = mockAnimais.filter((a) => a.tutorId === id);
-      setAnimais(filtered);
-      localStorage.setItem("animalhotels_animais", JSON.stringify(mockAnimais));
-    }
+    fetchData();
   }, [id]);
 
-  const saveAnimais = (newAnimais: Animal[]) => {
-    const storedAnimais = localStorage.getItem("animalhotels_animais");
-    let allAnimais: Animal[] = storedAnimais ? JSON.parse(storedAnimais) : [];
-    
-    allAnimais = allAnimais.filter((a) => a.tutorId !== id);
-    allAnimais = [...allAnimais, ...newAnimais];
-    
-    localStorage.setItem("animalhotels_animais", JSON.stringify(allAnimais));
-    setAnimais(newAnimais);
+  const fetchData = async () => {
+    try {
+        const responseTutores = await api.get('/tutores');
+        const foundTutor = responseTutores.data.find((t: Tutor) => t.id === id);
+        setTutor(foundTutor || null);
+
+        const responseAnimais = await api.get(`/animais?tutorId=${id}`);
+        setAnimais(responseAnimais.data);
+    } catch (error) {
+        console.error(error);
+        toast.error("Erro ao carregar dados.");
+    }
   };
 
-  const handleSave = (animalData: Omit<Animal, "id" | "tutorId"> & { id?: string }) => {
-    if (animalData.id) {
-      const updated = animais.map((a) =>
-        a.id === animalData.id ? { ...animalData, id: animalData.id, tutorId: id! } : a
-      );
-      saveAnimais(updated);
-      toast.success("Animal atualizado com sucesso!");
-    } else {
-      const newAnimal: Animal = {
-        ...animalData,
-        id: Date.now().toString(),
-        tutorId: id!,
-      };
-      saveAnimais([...animais, newAnimal]);
-      toast.success("Animal cadastrado com sucesso!");
+  const handleSave = async (animalData: Omit<Animal, "id" | "tutorId"> & { id?: string }) => {
+    try {
+        const payload = { ...animalData, tutorId: id };
+        
+        if (animalData.id) {
+            toast.error("Edição de animais requer implementação no Backend");
+        } else {
+            await api.post('/animais', payload);
+            toast.success("Animal cadastrado!");
+        }
+        fetchData();
+        setEditingAnimal(null);
+    } catch (error) {
+        toast.error("Erro ao salvar animal.");
     }
-    setEditingAnimal(null);
+  };
+
+  const handleDelete = async (animalId: string) => {
+    if(confirm("Remover este animal?")) {
+        try {
+            await api.delete(`/animais/${animalId}`);
+            toast.success("Animal removido!");
+            fetchData();
+        } catch(e) {
+            toast.error("Erro ao remover.");
+        }
+    }
   };
 
   const handleEdit = (animal: Animal) => {
@@ -74,66 +70,33 @@ const TutorDetails = () => {
     setIsFormOpen(true);
   };
 
-  const handleDelete = (animalId: string) => {
-    const filtered = animais.filter((a) => a.id !== animalId);
-    saveAnimais(filtered);
-    toast.success("Animal removido com sucesso!");
-  };
-
   const handleNewAnimal = () => {
     setEditingAnimal(null);
     setIsFormOpen(true);
   };
 
-  if (!tutor) {
-    return (
-      <Layout>
-        <div className="text-center py-16">
-          <p className="text-lg text-muted-foreground">Tutor não encontrado</p>
-          <Button onClick={() => navigate("/dashboard")} className="mt-4">
-            Voltar ao Dashboard
-          </Button>
-        </div>
-      </Layout>
-    );
-  }
+  if (!tutor) return <Layout><div>Carregando...</div></Layout>;
 
   return (
     <Layout>
       <div className="space-y-8">
         <div>
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/dashboard")}
-            className="gap-2 mb-6 -ml-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Voltar
+          <Button variant="ghost" onClick={() => navigate("/dashboard")} className="gap-2 mb-6 -ml-2">
+            <ArrowLeft className="w-4 h-4" /> Voltar
           </Button>
-
           <Card className="border-none shadow-lg">
             <CardContent className="p-8">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-3xl font-bold text-primary">
-                      {tutor.nome.charAt(0).toUpperCase()}
-                    </span>
+              <div className="flex items-center gap-6">
+                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-3xl font-bold text-primary">{tutor.nome.charAt(0).toUpperCase()}</span>
                   </div>
                   <div>
                     <h1 className="text-3xl font-bold mb-3">{tutor.nome}</h1>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Mail className="w-4 h-4" />
-                        <span>{tutor.email}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone className="w-4 h-4" />
-                        <span>{tutor.telefone}</span>
-                      </div>
+                    <div className="space-y-2 text-muted-foreground">
+                        <div className="flex items-center gap-2"><Mail className="w-4 h-4" />{tutor.email}</div>
+                        <div className="flex items-center gap-2"><Phone className="w-4 h-4" />{tutor.telefone}</div>
                     </div>
                   </div>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -141,48 +104,18 @@ const TutorDetails = () => {
 
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">Animais</h2>
-              <p className="text-muted-foreground mt-1">
-                {animais.length} {animais.length === 1 ? "pet cadastrado" : "pets cadastrados"}
-              </p>
-            </div>
-            <Button onClick={handleNewAnimal} className="gap-2 shadow-lg">
-              <Plus className="w-5 h-5" />
-              Novo Animal
-            </Button>
+            <h2 className="text-2xl font-bold">Animais ({animais.length})</h2>
+            <Button onClick={handleNewAnimal} className="gap-2 shadow-lg"><Plus className="w-5 h-5" /> Novo Animal</Button>
           </div>
-
-          {animais.length === 0 ? (
-            <div className="text-center py-16 bg-muted/30 rounded-xl border-2 border-dashed">
-              <p className="text-lg text-muted-foreground mb-4">
-                Nenhum animal cadastrado ainda
-              </p>
-              <Button onClick={handleNewAnimal} variant="outline" className="gap-2">
-                <Plus className="w-5 h-5" />
-                Cadastrar Primeiro Animal
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {animais.map((animal) => (
-                <AnimalCard
-                  key={animal.id}
-                  animal={animal}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
+                <AnimalCard key={animal.id} animal={animal} onEdit={handleEdit} onDelete={handleDelete} />
               ))}
-            </div>
-          )}
+          </div>
         </div>
 
-        <AnimalForm
-          open={isFormOpen}
-          onOpenChange={setIsFormOpen}
-          onSave={handleSave}
-          animal={editingAnimal}
-        />
+        <AnimalForm open={isFormOpen} onOpenChange={setIsFormOpen} onSave={handleSave} animal={editingAnimal} />
       </div>
     </Layout>
   );

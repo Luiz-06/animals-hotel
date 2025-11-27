@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { Tutor } from "@/types";
-import { mockTutores } from "@/lib/mock-data";
 import Layout from "@/components/Layout";
 import TutorCard from "@/components/TutorCard";
 import TutorForm from "@/components/TutorForm";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import api from "@/services/api"; 
 
 const Dashboard = () => {
   const [tutores, setTutores] = useState<Tutor[]>([]);
@@ -14,47 +14,53 @@ const Dashboard = () => {
   const [editingTutor, setEditingTutor] = useState<Tutor | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("animalhotels_tutores");
-    if (stored) {
-      setTutores(JSON.parse(stored));
-    } else {
-      setTutores(mockTutores);
-      localStorage.setItem("animalhotels_tutores", JSON.stringify(mockTutores));
-    }
+    fetchTutores();
   }, []);
 
-  const saveTutores = (newTutores: Tutor[]) => {
-    setTutores(newTutores);
-    localStorage.setItem("animalhotels_tutores", JSON.stringify(newTutores));
+  const fetchTutores = async () => {
+    try {
+      const response = await api.get('/tutores');
+      setTutores(response.data);
+    } catch (error) {
+      console.error("Erro ao buscar tutores:", error);
+      toast.error("Erro ao carregar lista de tutores.");
+    }
   };
 
-  const handleSave = (tutorData: Omit<Tutor, "id"> & { id?: string }) => {
-    if (tutorData.id) {
-      const updated = tutores.map((t) =>
-        t.id === tutorData.id ? { ...tutorData, id: tutorData.id } : t
-      );
-      saveTutores(updated);
-      toast.success("Tutor atualizado com sucesso!");
-    } else {
-      const newTutor = {
-        ...tutorData,
-        id: Date.now().toString(),
-      };
-      saveTutores([...tutores, newTutor]);
-      toast.success("Tutor cadastrado com sucesso!");
+  const handleSave = async (tutorData: Omit<Tutor, "id"> & { id?: string }) => {
+    try {
+      if (tutorData.id) {
+        // EDITAR (PUT)
+        await api.put(`/tutores/${tutorData.id}`, tutorData);
+        toast.success("Tutor atualizado com sucesso!");
+      } else {
+        await api.post('/tutores', tutorData);
+        toast.success("Tutor cadastrado com sucesso!");
+      }
+      fetchTutores(); 
+      setEditingTutor(null);
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      toast.error("Erro ao salvar tutor.");
     }
-    setEditingTutor(null);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Tem certeza que deseja excluir este tutor?")) {
+        try {
+            await api.delete(`/tutores/${id}`);
+            toast.success("Tutor removido com sucesso!");
+            fetchTutores(); 
+        } catch (error) {
+            console.error("Erro ao deletar:", error);
+            toast.error("Erro ao excluir tutor.");
+        }
+    }
   };
 
   const handleEdit = (tutor: Tutor) => {
     setEditingTutor(tutor);
     setIsFormOpen(true);
-  };
-
-  const handleDelete = (id: string) => {
-    const filtered = tutores.filter((t) => t.id !== id);
-    saveTutores(filtered);
-    toast.success("Tutor removido com sucesso!");
   };
 
   const handleNewTutor = () => {
@@ -81,7 +87,7 @@ const Dashboard = () => {
         {tutores.length === 0 ? (
           <div className="text-center py-16 bg-muted/30 rounded-xl border-2 border-dashed">
             <p className="text-lg text-muted-foreground mb-4">
-              Nenhum tutor cadastrado ainda
+              Nenhum tutor encontrado.
             </p>
             <Button onClick={handleNewTutor} variant="outline" className="gap-2">
               <Plus className="w-5 h-5" />

@@ -1,41 +1,38 @@
-import api from '@/services/api'; // Se der erro no '@', use '../services/api'
+import api from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext"; // Pode remover se não estiver usando o login do contexto
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PawPrint } from "lucide-react";
+import { toast } from "sonner";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login } = useAuth(); // Opcional se você está fazendo manual
+  const { login } = useAuth(); 
   const navigate = useNavigate();
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
-      // 1. Envia email e senha para o seu Back-end (server.js)
       const response = await api.post('/login', { 
         email: email,      
         password: password 
       });
 
-      // 2. Se deu certo, pega o token
       const { token } = response.data;
       
-      // 3. Guarda o token no navegador
       localStorage.setItem('token', token);
       
-      // 4. Muda para a tela principal
-      alert("Login realizado com sucesso!");
-      navigate('/dashboard'); // Verifique se essa rota existe no seu App.tsx
+      toast.success("Login realizado com sucesso!");
+      navigate('/dashboard');
 
     } catch (error) {
       console.error(error);
-      alert("Erro! Verifique se a senha é 123456 e o backend está rodando.");
+      toast.error("Credenciais inválidas ou servidor desligado.");
     }
   };
 
@@ -54,10 +51,8 @@ const Login = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {/* CORREÇÃO 1: onSubmit chama handleLogin agora */}
           <form onSubmit={handleLogin} className="space-y-6">
             
-            {/* Campo de Email */}
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium text-foreground">
                 Email
@@ -73,7 +68,6 @@ const Login = () => {
               />
             </div>
 
-            {/* CORREÇÃO 2: Adicionado o Campo de Senha que faltava */}
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium text-foreground">
                 Senha
