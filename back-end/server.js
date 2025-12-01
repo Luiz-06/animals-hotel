@@ -10,6 +10,9 @@ app.use(cors());
 const SECRET_KEY = "segredo123";
 
 const db = {
+    users: [
+        { id: "1", email: "admin@admin.com", password: "123456", name: "Administrador" }
+    ],
     tutores: [],
     animais: []
 };
@@ -27,13 +30,39 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
+app.post('/register', (req, res) => {
+    const { email, password, name } = req.body;
+
+    if (!email || !password || !name) {
+        return res.status(400).json({ message: "Preencha todos os campos!" });
+    }
+
+    const userExists = db.users.find(u => u.email === email);
+    if (userExists) {
+        return res.status(400).json({ message: "Email já cadastrado!" });
+    }
+
+    const newUser = { id: uuidv4(), email, password, name };
+    db.users.push(newUser);
+    
+    res.status(201).json({ message: "Usuário criado com sucesso!" });
+});
+
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
-    if (password === '123456') {
-        const token = jwt.sign({ email }, SECRET_KEY, { expiresIn: '1h' });
-        return res.json({ token, user: { email, name: 'Admin' } });
+
+    const user = db.users.find(u => u.email === email);
+
+    if (!user || user.password !== password) {
+        return res.status(401).json({ message: 'Email ou senha inválidos!' });
     }
-    return res.status(401).json({ message: 'Senha inválida (use 123456)' });
+
+    const token = jwt.sign({ email: user.email, id: user.id }, SECRET_KEY, { expiresIn: '1h' });
+    
+    return res.json({ 
+        token, 
+        user: { email: user.email, name: user.name } 
+    });
 });
 
 app.get('/tutores', (req, res) => res.json(db.tutores));
@@ -91,5 +120,4 @@ app.delete('/animais/:id', authenticateToken, (req, res) => {
 
 app.listen(3000, () => {
     console.log('🔥 BACKEND RODANDO NA PORTA 3000');
-    console.log('Login Senha: "123456"');
 });
